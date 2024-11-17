@@ -24,7 +24,7 @@ public:
   PixelGameEngine* engine;
   Sprite* view = nullptr;
   Decal* viewDecal = nullptr;
-  vu2d viewPos;
+  vi2d viewPos;
 
   Simulation(PixelGameEngine* engine)
   {
@@ -56,10 +56,47 @@ public:
   virtual void Render();
 };
 
+class Component
+{
+public:
+  Simulation* simulation;
+
+  Pixel color;
+
+  vi2d pos;
+  vi2d size;
+
+  Component(Simulation* simulation)
+  {
+    this->simulation = simulation;
+  }
+
+  Component(Simulation* simulation, vi2d pos, vi2d size)
+  {
+    this->simulation = simulation;
+    this->pos = pos;
+    this->size = size;
+  }
+
+  void Draw()
+  {
+    simulation->engine->DrawRect(simulation->viewPos + pos, size, color);
+  }
+
+  bool Collision(Component other)
+  {
+    // TODO:
+    return false;
+  }
+};
+
 class MagnetSimulation : public Simulation
 {
 public:
   Pixel color;
+
+  Component magnet = Component(this);
+  Component pipe = Component(this);
 
   MagnetSimulation(PixelGameEngine* engine, Pixel color) : Simulation(engine)
   {
@@ -74,6 +111,13 @@ public:
 
   void Reset() override
   {
+    // Resize components accordingly
+    int x = view->Size().y / 10;
+    magnet.size = vi2d(x, x);
+    magnet.pos = vi2d(view->Size().x / 2, 2 * x) - (magnet.size / 2);
+
+    pipe.size = vi2d(2 * x, view->Size().y * 0.8);
+    pipe.pos = vi2d(view->Size().x / 2, view->Size().y / 2) - pipe.size / 2;
   }
 
   void Start() override
@@ -89,7 +133,10 @@ public:
   void Render() override
   {
     engine->Clear(color);
-    engine->Draw((timeElapsed) % (engine->ScreenWidth() >> 1), 100 + 10 * sin(timeElapsed), Pixel(255, 0, 0));
+
+    pipe.Draw();
+    magnet.Draw();
+
     viewDecal->Update();
   }
 };
