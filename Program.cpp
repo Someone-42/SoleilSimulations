@@ -22,22 +22,20 @@ protected:
 
 public:
   PixelGameEngine* engine;
-  Sprite* view = nullptr;
-  Decal* viewDecal = nullptr;
+  // Sprite* view = nullptr;
+  // Decal* viewDecal = nullptr;
   vi2d viewPos;
+  vi2d viewSize;
 
   Simulation(PixelGameEngine* engine)
   {
     this->engine = engine;
   }
 
-  void UpdateView(Sprite* view, vu2d viewPos)
+  void UpdateView(vf2d viewPos, vi2d viewSize)
   {
-    delete this->viewDecal;
-    delete this->view;
-    this->view = view;
-    this->viewDecal = new Decal(view);
     this->viewPos = viewPos;
+    this->viewSize = viewSize;
   }
 
   virtual void Reset();
@@ -63,8 +61,8 @@ public:
 
   Pixel color;
 
-  vi2d pos;
-  vi2d size;
+  vf2d pos;
+  vf2d size;
 
   Component(Simulation* simulation)
   {
@@ -80,7 +78,7 @@ public:
 
   void Draw()
   {
-    simulation->engine->DrawRect(simulation->viewPos + pos, size, color);
+    simulation->engine->FillRectDecal(simulation->viewPos + pos, size, color);
   }
 
   bool Collision(Component other)
@@ -105,19 +103,17 @@ public:
 
   ~MagnetSimulation()
   {
-    delete this->viewDecal;
-    delete this->view;
   }
 
   void Reset() override
   {
     // Resize components accordingly
-    int x = view->Size().y / 10;
+    int x = viewSize.y / 10;
     magnet.size = vi2d(x, x);
-    magnet.pos = vi2d(view->Size().x / 2, 2 * x) - (magnet.size / 2);
+    magnet.pos = vi2d(viewSize.x / 2, 2 * x) - (magnet.size / 2);
 
-    pipe.size = vi2d(2 * x, view->Size().y * 0.8);
-    pipe.pos = vi2d(view->Size().x / 2, view->Size().y / 2) - pipe.size / 2;
+    pipe.size = vi2d(2 * x, viewSize.y * 0.8);
+    pipe.pos = vi2d(viewSize.x / 2, viewSize.y / 2) - pipe.size / 2;
   }
 
   void Start() override
@@ -132,12 +128,12 @@ public:
 
   void Render() override
   {
-    engine->Clear(color);
+    engine->FillRectDecal(viewPos, viewSize, color);
 
     pipe.Draw();
     magnet.Draw();
 
-    viewDecal->Update();
+    // viewDecal->Update();
   }
 };
 
@@ -167,8 +163,8 @@ public:
 public:
   bool OnUserCreate() override
   {
-    simulations[0]->UpdateView(new Sprite(ScreenWidth() / 2, ScreenHeight()), vu2d(0, 0));
-    simulations[1]->UpdateView(new Sprite(ScreenWidth() / 2, ScreenHeight()), vu2d(ScreenWidth() / 2, 0));
+    simulations[0]->UpdateView(vi2d(0, 0), vi2d(ScreenWidth() / 2, ScreenHeight()));
+    simulations[1]->UpdateView(vi2d(ScreenWidth() / 2, 0), vi2d(ScreenWidth() / 2, ScreenHeight()));
     for (auto& simulation : simulations)
     {
       simulation->Reset();
@@ -193,10 +189,9 @@ public:
     // ---------------------
     for (auto& simulation : simulations)
     {
-      SetDrawTarget(simulation->view);
+      // SetDrawTarget(simulation->view);
       simulation->Render();
-      SetDrawTarget(nullptr);
-      DrawDecal(simulation->viewPos, simulation->viewDecal);
+      // DrawDecal(simulation->viewPos, simulation->viewDecal);
     }
 
     // Going back to main screen for rendering
