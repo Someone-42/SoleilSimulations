@@ -76,7 +76,7 @@ public:
     this->size = size;
   }
 
-  void Draw()
+  virtual void Draw()
   {
     simulation->engine->FillRectDecal(simulation->viewPos + pos, size, color);
   }
@@ -89,13 +89,31 @@ public:
   }
 };
 
+class CopperPipe : public Component
+{
+
+public:
+  CopperPipe(Simulation* simulation) : Component(simulation)
+  {
+  }
+
+  Pixel innerColor;
+  void Draw() override
+  {
+    vf2d sz = vf2d(size.x / 2, size.y);
+    simulation->engine->GradientFillRectDecal(simulation->viewPos + pos, sz, color, color, innerColor, innerColor);
+    simulation->engine->GradientFillRectDecal(simulation->viewPos + pos + vf2d(size.x / 2, 0), sz, innerColor,
+                                              innerColor, color, color);
+  }
+};
+
 class MagnetSimulation : public Simulation
 {
 public:
   Pixel color;
 
   Component pipePVC = Component(this);
-  Component pipeCopper = Component(this);
+  CopperPipe pipeCopper = CopperPipe(this);
 
   const float g = 9.81;
   float timeScale = 20;
@@ -108,9 +126,10 @@ public:
   MagnetSimulation(PixelGameEngine* engine, Pixel color) : Simulation(engine)
   {
     this->color = color;
-    magnet.color = Pixel(200, 200, 200);
+    magnet.color = Pixel(165, 165, 165);
     pipeCopper.color = Pixel(184, 115, 51);
-    pipePVC.color = Pixel(128, 128, 128);
+    pipeCopper.innerColor = Pixel(150, 50, 20);
+    pipePVC.color = Pixel(128, 128, 160);
   }
 
   ~MagnetSimulation()
