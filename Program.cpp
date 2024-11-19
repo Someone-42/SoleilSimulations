@@ -1,4 +1,5 @@
 #include <cmath>
+#include <locale>
 #include <memory>
 #include <stdint.h>
 #define OLC_PGE_APPLICATION
@@ -205,6 +206,62 @@ public:
   }
 };
 
+class Balloon
+{
+public:
+  Balloon(Simulation* simulation)
+  {
+    this->simulation = simulation;
+  }
+
+  Simulation* simulation;
+
+  vf2d pos;
+  float radius;
+
+  Pixel color;
+
+  void Draw()
+  {
+    simulation->engine->DrawCircle(pos + simulation->viewPos, radius, color);
+  }
+};
+
+class VacuumSimulation : public Simulation
+{
+public:
+  Pixel color;
+
+  Component container = Component(this);
+  Balloon balloon = Balloon(this);
+
+  VacuumSimulation(PixelGameEngine* engine, Pixel color) : Simulation(engine)
+  {
+    this->color = color;
+  }
+
+  void Reset() override
+  {
+    vf2d v = viewSize / 12;
+    container.pos = v;
+    container.size = viewSize - 2 * v;
+
+    balloon.pos = viewSize / 2;
+    balloon.radius = 100;
+
+    balloon.color = Pixel(255, 0, 255);
+    container.color = Pixel(150, 150, 150);
+  }
+
+  void Render() override
+  {
+    // engine->FillRectDecal(viewPos, viewSize, color);
+
+    // container.Draw();
+    balloon.Draw();
+  }
+};
+
 class SimulationWindow : public olc::PixelGameEngine
 {
 private:
@@ -218,7 +275,7 @@ public:
     cout << "ctor\n";
     sAppName = "Simulation";
     simulations.emplace_back(new MagnetSimulation(this, Pixel(0, 0, 0)));
-    simulations.emplace_back(new MagnetSimulation(this, Pixel(0, 0, 0)));
+    simulations.emplace_back(new VacuumSimulation(this, Pixel(0, 0, 0)));
     cout << "emplaced \n";
     // TODO: Create default views -> Update simulation view
     cout << "out ctor\n";
