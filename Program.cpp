@@ -83,8 +83,9 @@ public:
 
   bool Collision(Component other)
   {
-    // TODO:
-    return false;
+    bool hitx = pos.x + size.x >= other.pos.x && other.pos.x + other.size.x >= pos.x;
+    bool hity = pos.y + size.y >= other.pos.y && other.pos.y + other.size.y >= pos.y;
+    return hitx && hity;
   }
 };
 
@@ -93,12 +94,23 @@ class MagnetSimulation : public Simulation
 public:
   Pixel color;
 
+  Component pipePVC = Component(this);
+  Component pipeCopper = Component(this);
+
+  const float g = 9.81;
+  float timeScale = 20;
+
   Component magnet = Component(this);
-  Component pipe = Component(this);
+  float magnetSpeed = 0;
+  vf2d magnetStartPos[2];
+  char magnetCurrentPos = 0;
 
   MagnetSimulation(PixelGameEngine* engine, Pixel color) : Simulation(engine)
   {
     this->color = color;
+    magnet.color = Pixel(200, 200, 200);
+    pipeCopper.color = Pixel(184, 115, 51);
+    pipePVC.color = Pixel(128, 128, 128);
   }
 
   ~MagnetSimulation()
@@ -109,11 +121,17 @@ public:
   {
     // Resize components accordingly
     int x = viewSize.y / 10;
-    magnet.size = vi2d(x, x);
-    magnet.pos = vi2d(viewSize.x / 2, 2 * x) - (magnet.size / 2);
 
-    pipe.size = vi2d(2 * x, viewSize.y * 0.8);
-    pipe.pos = vi2d(viewSize.x / 2, viewSize.y / 2) - pipe.size / 2;
+    pipePVC.size = vi2d(1.5 * x, viewSize.y * 0.5);
+    pipePVC.pos = vi2d(viewSize.x / 4, viewSize.y * 0.7) - pipePVC.size / 2;
+
+    pipeCopper.size = vi2d(1.5 * x, viewSize.y * 0.5);
+    pipeCopper.pos = vi2d(3 * viewSize.x / 4, viewSize.y * 0.7) - pipeCopper.size / 2;
+
+    magnet.size = vi2d(1 * x, x / 3);
+    magnet.pos = vi2d(pipePVC.pos.x + pipePVC.size.x / 2, viewSize.y * 0.05) - (magnet.size / 2);
+    magnetStartPos[0] = magnet.pos;
+    magnetStartPos[1] = magnet.pos + (vf2d(1, 0) * (-pipePVC.pos.x + pipeCopper.pos.x));
   }
 
   void Start() override
@@ -121,16 +139,47 @@ public:
     Simulation::Start();
   }
 
+  void ChangeMagnetPipe()
+  {
+    magnetSpeed = 0;
+    magnetCurrentPos = 1 - magnetCurrentPos;
+    magnet.pos = magnetStartPos[magnetCurrentPos];
+  }
+
   void Update(float deltaTime) override
   {
     Simulation::Update(deltaTime);
+
+    deltaTime *= timeScale;
+
+    float acc = g;
+
+    if (magnet.Collision(pipeCopper))
+    {
+      // This is a lorentz force simulation
+      // At some velocity, the induced magnetic field, creates opposing force equal to gravity
+      // therefore the accelerations returns to 0
+      //
+      // And the magnet should move at constant speeds
+      //
+      // Therefore we multiply by some kind of simulation constant
+      acc -= 0.8 * magnetSpeed;
+    }
+
+    magnetSpeed += deltaTime * acc;
+
+    magnet.pos.y += magnetSpeed * deltaTime;
+
+    if (magnet.pos.y >= viewSize.y)
+      ChangeMagnetPipe();
   }
 
   void Render() override
   {
     engine->FillRectDecal(viewPos, viewSize, color);
 
-    pipe.Draw();
+    pipePVC.Draw();
+    pipeCopper.Draw();
     magnet.Draw();
 
     // viewDecal->Update();
@@ -149,8 +198,8 @@ public:
   {
     cout << "ctor\n";
     sAppName = "Simulation";
-    simulations.emplace_back(new MagnetSimulation(this, Pixel(255, 0, 0)));
-    simulations.emplace_back(new MagnetSimulation(this, Pixel(0, 255, 0)));
+    simulations.emplace_back(new MagnetSimulation(this, Pixel(0, 0, 0)));
+    simulations.emplace_back(new MagnetSimulation(this, Pixel(0, 0, 0)));
     cout << "emplaced \n";
     // TODO: Create default views -> Update simulation view
     cout << "out ctor\n";
@@ -171,6 +220,7 @@ public:
       simulation->Start();
     }
     cout << "out create\n";
+
     return true;
   }
 
